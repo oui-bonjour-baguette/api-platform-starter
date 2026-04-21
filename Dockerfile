@@ -1,4 +1,8 @@
-FROM php:8.3-fpm-alpine AS base
+FROM php:8.5-fpm-alpine AS base
+
+RUN apk add --no-cache shadow \
+    && usermod -u 1000 www-data \
+    && groupmod -g 1000 www-data
 
 # Extensions système nécessaires
 RUN apk add --no-cache \
@@ -12,15 +16,9 @@ RUN apk add --no-cache \
     unzip \
     oniguruma-dev
 
-# Extensions PHP
-RUN docker-php-ext-install \
-    pdo \
-    pdo_pgsql \
-    intl \
-    zip \
-    opcache \
-    mbstring \
-    bcmath
+# En PHP 8.5 : pdo/opcache/mbstring/bcmath sont built-in (statiques)
+# Seules pdo_pgsql, intl et zip nécessitent une installation
+RUN docker-php-ext-install pdo_pgsql intl zip
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
