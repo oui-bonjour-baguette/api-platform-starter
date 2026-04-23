@@ -1,144 +1,186 @@
 # API Platform Starter
 
-Starterkit Symfony 7.4 + API Platform 4.3 prêt à l'emploi, avec authentification JWT via cookie httpOnly.
+Un starter Symfony + API Platform prêt à l'emploi, avec authentification JWT par cookie httpOnly.
 
-## Stack
+Tu démarres, tu codes tes ressources, tu ne perds pas 3 jours sur l'auth.
 
-- **PHP 8.5**
-- **Symfony 7.4**
-- **API Platform 4.3**
-- **Doctrine ORM 3** + PostgreSQL 16
-- **UUID v7** pour les identifiants (`symfony/uid`)
-- **JWT** via LexikJWTAuthenticationBundle, transporté en cookie `httpOnly`
-- **CORS** via NelmioCorsBundle (`allow_credentials: true`)
-- **PHPUnit 13** — **PHPStan 2** — **PHP-CS-Fixer 3**
-- Nginx 1.25 · Mailpit (catcher mail dev)
+---
 
-## Prérequis
+## Démarrer en 2 minutes
 
-- Docker + Docker Compose
-
-> Ne pas utiliser le PHP du host pour composer/symfony — tout passe par les conteneurs.
-
-## Installation
+Il te faut juste **Docker**.
 
 ```bash
 cp .env.example .env
-# Ajuster les variables dans .env si nécessaire (notamment JWT_COOKIE_SECURE=0 en local)
-make install
+make install         # build + composer + clés JWT + migrations
+make reset           # crée la base + un user admin
 ```
 
-`make install` exécute dans l'ordre : build Docker → démarrage → `composer install` → génération des clés JWT → migrations.
+L'API tourne sur **http://localhost:8080/api**. Doc Swagger sur **http://localhost:8080/api/docs**.
 
-## Commandes courantes
+Comptes créés par `make reset` :
+
+| Email                | Mot de passe | Rôle       |
+|----------------------|--------------|------------|
+| `admin@example.com`  | `adminpass`  | ROLE_ADMIN |
+| `user@example.com`   | `userpass`   | ROLE_USER  |
+
+---
+
+## Tester que ça marche
 
 ```bash
-make start          # Démarrer les conteneurs
-make stop           # Arrêter les conteneurs
-make shell          # Shell PHP dans le conteneur
+# 1. Login → pose un cookie httpOnly
+curl -i -X POST http://localhost:8080/api/login \
+  -H 'Content-Type: application/json' \
+  -c /tmp/cookies.txt \
+  -d '{"email":"admin@example.com","password":"adminpass"}'
+# → 200 OK, Set-Cookie: auth_token=...; httponly; samesite=lax
 
-make jwt            # Régénérer les clés JWT
-make migrate        # Lancer les migrations Doctrine
-make migrate-diff   # Générer une migration depuis les entités
-make reset          # Drop BDD + migrate + fixtures (admin@example.com / adminpass)
+# 2. Appeler /api/me avec le cookie
+curl http://localhost:8080/api/me -b /tmp/cookies.txt
 
-make test           # PHPUnit
-make qa             # lint + cs + analyse + test
-
-make composer c="require mon/bundle"
-make console  c="debug:router"
+# 3. Logout
+curl -i -X POST http://localhost:8080/api/logout -b /tmp/cookies.txt
+# → 204, cookie effacé
 ```
 
-## Authentification
+---
 
-Le JWT est **toujours transporté via un cookie httpOnly** (`auth_token` par défaut). Il ne transite jamais dans le corps JSON ni dans l'en-tête `Authorization`.
+## Les endpoints fournis
 
-### Endpoints
+| Méthode | URL                | Qui peut l'appeler   | À quoi ça sert                      |
+|---------|--------------------|----------------------|-------------------------------------|
+| POST    | `/api/users`       | Public               | S'inscrire (`email`, `plainPassword`) |
+| POST    | `/api/login`       | Public               | Se connecter → pose le cookie JWT   |
+| POST    | `/api/logout`      | Public               | Efface le cookie                    |
+| GET     | `/api/me`          | Connecté             | Profil de l'utilisateur courant     |
+| GET     | `/api/users/{id}`  | Admin ou le user lui-même | Lire un user                   |
+| GET     | `/api/docs`        | Public               | Doc Swagger/OpenAPI                 |
 
-| Méthode | URL               | Description                                   | Accès            |
-|--------:|-------------------|-----------------------------------------------|------------------|
-| POST    | `/api/users`      | Inscription (`email` + `plainPassword`)       | Public           |
-| POST    | `/api/login`      | Connexion (`email` + `password`) → cookie     | Public           |
-| POST    | `/api/logout`     | Efface le cookie (logout stateless)           | Public           |
-| GET     | `/api/me`         | Utilisateur courant                           | Authentifié      |
-| GET     | `/api/users/{id}` | Récupère un user                              | Admin ou soi-même|
-| GET     | `/api/docs`       | Documentation OpenAPI                         | Public           |
+---
 
-### Flux côté client (SPA)
+## Côté client (SPA, React, Vue, etc.)
+
+Le navigateur gère le cookie tout seul — tu n'as **rien à stocker en JavaScript**. Juste `credentials: 'include'` :
 
 ```js
+// Login
 await fetch('/api/login', {
-    method: 'POST',
-    credentials: 'include',           // ← indispensable pour recevoir le cookie
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
 });
 
-await fetch('/api/me', { credentials: 'include' });  // le cookie suit automatiquement
+// Tout appel ultérieur — le cookie est envoyé automatiquement
+await fetch('/api/me', { credentials: 'include' });
 
+// Logout
 await fetch('/api/logout', { method: 'POST', credentials: 'include' });
 ```
 
-### Test rapide en curl
+---
+
+## Commandes Make
+
+> Règle d'or : **toutes les commandes Symfony/composer passent par `make`**, jamais par le PHP du Mac.
+
+### Tous les jours
 
 ```bash
-BASE=http://localhost:8080/api
-JAR=/tmp/api-cookies.txt && rm -f "$JAR"
-
-curl -s -X POST "$BASE/users" -H 'Content-Type: application/ld+json' \
-    -d '{"email":"alice@example.com","plainPassword":"supersecret"}' | jq
-
-curl -i -X POST "$BASE/login" -H 'Content-Type: application/json' \
-    --cookie-jar "$JAR" \
-    -d '{"email":"alice@example.com","password":"supersecret"}'
-# → 200, Set-Cookie: auth_token=eyJ...; httponly; samesite=lax  (pas de `token` dans le body)
-
-curl -s "$BASE/me" --cookie "$JAR" -H 'Accept: application/ld+json' | jq
-curl -i -X POST "$BASE/logout" --cookie "$JAR" --cookie-jar "$JAR"   # → 204 + cookie expiré
+make start             # démarre les conteneurs
+make stop              # les stoppe
+make shell             # ouvre un bash dans le conteneur PHP
+make logs              # logs en direct
 ```
 
-## Variables d'environnement
+### Base de données
 
-| Variable | Description | Défaut |
-|---|---|---|
-| `DATABASE_URL` | DSN PostgreSQL | — |
-| `JWT_SECRET_KEY` | Chemin clé privée JWT | `%kernel.project_dir%/config/jwt/private.pem` |
-| `JWT_PUBLIC_KEY` | Chemin clé publique JWT | `%kernel.project_dir%/config/jwt/public.pem` |
-| `JWT_PASSPHRASE` | Passphrase des clés JWT | — |
-| `JWT_TTL` | Durée de vie du JWT en secondes | `3600` |
-| `JWT_COOKIE_NAME` | Nom du cookie qui transporte le JWT | `auth_token` |
-| `JWT_COOKIE_SECURE` | Cookie `Secure` (0 en dev HTTP, 1 en prod HTTPS) | `0` (dev), `1` (example) |
-| `JWT_COOKIE_SAMESITE` | `lax` \| `strict` \| `none` | `lax` |
-| `JWT_COOKIE_PATH` | Path du cookie | `/` |
-| `JWT_COOKIE_DOMAIN` | Domaine du cookie (vide = host-only) | `` |
-| `CORS_ALLOW_ORIGIN` | Regex origines CORS autorisées | `^https?://(localhost\|127\.0\.0\.1)(:[0-9]+)?$` |
-| `NGINX_PORT` | Port HTTP exposé | `8080` |
+```bash
+make migrate           # applique les migrations
+make migrate-diff      # génère une nouvelle migration depuis tes entités
+make fixtures          # recharge les fixtures
+make reset             # drop + create + migrate + fixtures (tout neuf)
+```
 
-## Sécurité — tradeoffs et points de vigilance
+### Qualité de code
 
-1. **CSRF résiduel.** `SameSite=Lax` bloque la classe CSRF classique, mais pas tout. Si vous passez `SameSite=None` (SPA sur un domaine différent de l'API), **ajoutez** une protection dédiée (double-submit cookie ou en-tête custom validé côté serveur).
-2. **`JWT_COOKIE_SECURE=0` uniquement en dev.** En prod le cookie DOIT être `Secure` (HTTPS obligatoire).
-3. **`SameSite=None` impose `Secure=true`** (contrainte navigateur).
-4. **CORS wildcard incompatible avec `allow_credentials: true`.** Ne jamais mettre `CORS_ALLOW_ORIGIN='^.*$'` — le navigateur refusera la réponse.
-5. **Logout stateless.** Le cookie est effacé côté client, mais un JWT copié avant logout reste techniquement valide jusqu'à `exp`. Gardez `JWT_TTL` court (1 h par défaut). Pour une révocation stricte, ajoutez une blacklist (hors scope).
-6. **Cookie host-only par défaut** (`JWT_COOKIE_DOMAIN=` vide). Pour partager entre sous-domaines, mettez `JWT_COOKIE_DOMAIN=.example.com` — mesurez le blast radius.
-7. **L'en-tête `Authorization` n'est pas accepté.** L'extractor Lexik correspondant est désactivé dans `config/packages/lexik_jwt_authentication.yaml`. Si vous le réactivez, remettez aussi `Authorization` dans `allow_headers` de Nelmio CORS.
-8. **Le JWT n'apparaît jamais dans le body JSON.** Le `JwtCookieSubscriber` le retire systématiquement — ne pas réactiver `lexik_jwt_authentication.set_cookies` (double-écriture).
+```bash
+make test              # PHPUnit
+make cs                # check style (dry-run)
+make cs-fix            # corrige le style
+make analyse           # PHPStan
+make qa                # lint + cs + analyse + test
+```
 
-## Structure
+### Utilitaires
+
+```bash
+make composer c="require mon/bundle"
+make console  c="debug:router"
+make jwt               # régénère les clés JWT
+make clean             # supprime conteneurs, volumes, cache
+```
+
+---
+
+## Ajouter une ressource
+
+```bash
+make console c="make:entity Article"    # crée l'entité + le repository
+make migrate-diff                        # génère la migration
+make migrate                             # l'applique
+```
+
+Ajoute ensuite `#[ApiResource]` sur ta classe dans `src/Entity/Article.php` et l'API est disponible sur `/api/articles`.
+
+---
+
+## Configuration
+
+Le fichier `.env` couvre tout ce qui est utile. Les trucs qu'on touche vraiment :
+
+| Variable                | À quoi ça sert                                     | Défaut                            |
+|-------------------------|----------------------------------------------------|-----------------------------------|
+| `NGINX_PORT`            | Port HTTP exposé                                   | `8080`                            |
+| `POSTGRES_PORT`         | Port Postgres exposé (pour connect depuis le Mac)  | `5432`                            |
+| `JWT_TTL`               | Durée de vie du JWT (secondes)                     | `3600`                            |
+| `JWT_COOKIE_SECURE`     | `1` en prod HTTPS, `0` en dev HTTP                 | `0` en dev, `1` dans `.env.example` |
+| `JWT_COOKIE_SAMESITE`   | `lax` \| `strict` \| `none`                        | `lax`                             |
+| `CORS_ALLOW_ORIGIN`     | Regex des origines autorisées                      | `localhost` + `127.0.0.1`         |
+
+Pour overrider en local sans toucher à `.env`, utilise `.env.local` (gitignoré).
+
+---
+
+## ⚠️ À savoir avant la prod
+
+1. **Passe `JWT_COOKIE_SECURE=1` et sers en HTTPS.** Un cookie `Secure=0` sur HTTP est sniffable.
+2. **`CORS_ALLOW_ORIGIN` doit lister explicitement tes origines.** Le wildcard `^.*$` est incompatible avec les cookies — les navigateurs refuseront la réponse.
+3. **Le logout n'invalide pas le JWT côté serveur.** Le cookie est effacé chez le client, mais un token volé avant le logout reste valide jusqu'à `exp`. Garde `JWT_TTL` court (1 h par défaut est raisonnable).
+4. **CSRF : `SameSite=Lax` suffit pour un SPA same-site.** Si ton SPA tourne sur un domaine différent de l'API (`SameSite=None`), ajoute une protection dédiée (double-submit token ou en-tête custom).
+5. **Change la passphrase JWT** (`JWT_PASSPHRASE` dans `.env`) et régénère les clés avec `make jwt` avant prod.
+
+---
+
+## Stack
+
+PHP 8.5 · Symfony 7.4 · API Platform 4.3 · Doctrine ORM 3 · PostgreSQL 16 · Lexik JWT · Nelmio CORS · PHPUnit 13 · PHPStan 2 · PHP-CS-Fixer 3 · Nginx 1.25 · Mailpit (mails de dev sur http://localhost:8025).
+
+---
+
+## Arborescence
 
 ```
 src/
-  ApiResource/    # Ressources API Platform (DTO)
-  Controller/     # Controllers custom (ex. LogoutController)
-  DataFixtures/   # Fixtures Doctrine
-  Entity/         # Entités Doctrine (User)
-  Repository/     # Repositories
-  Security/       # JwtCookieSubscriber
-  State/          # Processors / Providers API Platform
-config/
-  packages/       # Configuration bundles
-  routes/         # Routes (security, api_platform)
-migrations/       # Migrations Doctrine
-tests/            # Tests PHPUnit
+  Controller/      # LoginController (stub), LogoutController
+  DataFixtures/    # AppFixtures (admin + user de démo)
+  Entity/          # User (UUID v7, ApiResource)
+  Repository/      # UserRepository
+  Security/        # JwtCookieSubscriber (pose le cookie sur login)
+  State/           # UserPasswordHasherProcessor + MeProvider
+config/packages/   # security, lexik_jwt, nelmio_cors, doctrine, …
+migrations/        # Migrations Doctrine
+tests/Api/         # AuthFlowTest (end-to-end du flow de login)
 ```
