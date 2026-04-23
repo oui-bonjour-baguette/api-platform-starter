@@ -7,6 +7,11 @@ doctrine:
         #server_version: '16'
 
         profiling_collect_backtrace: '%kernel.debug%'
+
+        # Enregistre le type Doctrine `uuid` basé sur symfony/uid.
+        # Requis par l'entité App\Entity\User (identifiant UUID v7).
+        types:
+            uuid: Symfony\Bridge\Doctrine\Types\UuidType
     orm:
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore

@@ -2,8 +2,12 @@ nelmio_cors:
     defaults:
         origin_regex: true
         allow_origin: ['%env(CORS_ALLOW_ORIGIN)%']
+        # Requis pour que le navigateur transmette le cookie httpOnly.
+        # ATTENTION : incompatible avec une origine wildcard — n'utilisez pas `^.*$`.
+        allow_credentials: true
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-        allow_headers: ['Content-Type', 'Authorization']
+        # `Authorization` retiré : l'extractor Lexik correspondant est désactivé.
+        allow_headers: ['Content-Type']
         expose_headers: ['Link']
         max_age: 3600
     paths:
