@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\State;
+namespace App\State\User;
 
 use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
@@ -19,6 +19,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final readonly class UserPasswordHasherProcessor implements ProcessorInterface
 {
+
+    /**
+     * @param ProcessorInterface<User, User> $persistProcessor
+     */
     public function __construct(
         #[Autowire(service: PersistProcessor::class)]
         private ProcessorInterface $persistProcessor,

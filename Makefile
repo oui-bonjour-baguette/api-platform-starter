@@ -107,8 +107,9 @@ test: ## ✅ Lancer les tests PHPUnit
 	@echo "$(CYAN)▶ Tests...$(RESET)"
 	$(PHP) php bin/phpunit --testdox
 
-test-coverage: ## Lancer les tests avec couverture de code
-	$(PHP) php bin/phpunit --coverage-html var/coverage
+test-coverage: ## 📊 Lancer les tests avec couverture de code
+	@echo "$(CYAN)▶ Tests avec Coverage...$(RESET)"
+	$(PHP) env XDEBUG_MODE=coverage php bin/phpunit --coverage-html var/coverage
 
 lint: ## Vérifier la syntaxe PHP et Twig
 	$(CONSOLE) lint:yaml config

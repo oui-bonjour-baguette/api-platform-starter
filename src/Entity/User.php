@@ -8,8 +8,8 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
 use App\Repository\UserRepository;
-use App\State\MeProvider;
-use App\State\UserPasswordHasherProcessor;
+use App\State\User\MeProvider;
+use App\State\User\UserPasswordHasherProcessor;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -26,25 +26,25 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new Post(
             uriTemplate: '/users',
-            security: "is_granted('PUBLIC_ACCESS')",
-            processor: UserPasswordHasherProcessor::class,
-            validationContext: ['groups' => ['Default', 'user:create']],
-            denormalizationContext: ['groups' => ['user:create']],
             normalizationContext: ['groups' => ['user:read']],
+            denormalizationContext: ['groups' => ['user:create']],
+            security: "is_granted('PUBLIC_ACCESS')",
+            validationContext: ['groups' => ['Default', 'user:create']],
+            processor: UserPasswordHasherProcessor::class,
         ),
         new Get(
             uriTemplate: '/users/{id}',
-            security: "is_granted('ROLE_ADMIN') or object == user",
             normalizationContext: ['groups' => ['user:read']],
+            security: "is_granted('ROLE_ADMIN') or object == user",
         ),
         new Get(
             uriTemplate: '/me',
-            security: "is_granted('IS_AUTHENTICATED_FULLY')",
-            provider: MeProvider::class,
-            read: true,
-            normalizationContext: ['groups' => ['user:read']],
-            // Pas d'{id} dans l'URI : provider retourne l'utilisateur courant.
             uriVariables: [],
+            normalizationContext: ['groups' => ['user:read']],
+            security: "is_granted('IS_AUTHENTICATED_FULLY')",
+            read: true,
+            // Pas d'{id} dans l'URI : provider retourne l'utilisateur courant.
+            provider: MeProvider::class,
         ),
     ],
 )]
@@ -75,6 +75,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /** Mot de passe en clair, uniquement à l'entrée. */
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8, max: 4096, groups: ['user:create'])]
+    #[Assert\Regex(
+        pattern: '/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^\w\s]).+$/',
+        message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.',
+        match: true,
+        groups: ['user:create']
+    )]
+    #[Assert\NotCompromisedPassword(groups: ['user:create'])]
     #[Groups(['user:create'])]
     private ?string $plainPassword = null;
 

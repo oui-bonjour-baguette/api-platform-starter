@@ -54,14 +54,14 @@ final readonly class JwtCookieSubscriber implements EventSubscriberInterface
 
         $response = $event->getResponse();
         $response->headers->setCookie(Cookie::create(
-            name:     $this->cookieName,
-            value:    $token,
-            expire:   time() + $this->ttl,
-            path:     $this->path,
-            domain:   '' !== $this->domain ? $this->domain : null,
-            secure:   $this->secure,
+            name: $this->cookieName,
+            value: $token,
+            expire: time() + $this->ttl,
+            path: $this->path,
+            domain: '' !== $this->domain ? $this->domain : null,
+            secure: $this->secure,
             httpOnly: true,
-            raw:      false,
+            raw: false,
             sameSite: $this->sameSite,
         ));
     }
