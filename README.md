@@ -1,186 +1,106 @@
-# API Platform Starter
+# 🚀 Symfony API Platform Starter Kit
 
-Un starter Symfony + API Platform prêt à l'emploi, avec authentification JWT par cookie httpOnly.
+Bienvenue dans ce **Starter Kit** conçu pour le développement d'APIs modernes, robustes et hautement scalables. Ce projet repose sur **PHP 8.3**, **Symfony 7** et **API Platform 3**, avec une architecture orientée "Resource-Driven".
 
-Tu démarres, tu codes tes ressources, tu ne perds pas 3 jours sur l'auth.
+## 🏗️ 1. Architecture & Design
+
+Le projet suit une architecture découplée où chaque ressource API est une entité riche, gérée par les composants de Symfony.
+
+* **API Platform 3** : Gère la couche d'exposition REST/JSON-LD. L'accès aux données est piloté par des **State Providers** (lecture) et **State Processors** (écriture), permettant de séparer l'infrastructure de la logique métier.
+* **Security (JWT & HttpOnly Cookies)** : Contrairement au stockage LocalStorage classique, ce starter utilise un `JwtCookieSubscriber` pour injecter le token JWT dans un cookie `HttpOnly` et `Secure`. Cela élimine les risques de failles XSS tout en restant compatible avec les clients SPA/Mobile.
+* **Doctrine ORM** : Couche d'abstraction pour PostgreSQL, utilisant les attributs PHP 8 pour le mapping.
+
+
 
 ---
 
-## Démarrer en 2 minutes
+## 🛠️ 2. Installation & Setup
 
-Il te faut juste **Docker**.
+### Pré-requis
+* Docker & Docker Compose
+* Make (optionnel, mais recommandé)
+
+### Lancement rapide
+Le projet est entièrement conteneurisé. Utilisez le `Makefile` pour une installation automatisée :
 
 ```bash
-cp .env.example .env
-make install         # build + composer + clés JWT + migrations
-make reset           # crée la base + un user admin
+# Clone le dépôt
+git clone <repository-url>
+cd api-platform-starter
+
+# Initialise l'environnement (build docker, composer install, migrations, fixtures)
+make install
 ```
 
-L'API tourne sur **http://localhost:8080/api**. Doc Swagger sur **http://localhost:8080/api/docs**.
-
-Comptes créés par `make reset` :
-
-| Email                | Mot de passe | Rôle       |
-|----------------------|--------------|------------|
-| `admin@example.com`  | `adminpass`  | ROLE_ADMIN |
-| `user@example.com`   | `userpass`   | ROLE_USER  |
+### Configuration
+Les variables d'environnement sont gérées dans le fichier `.env`. Pour la production, créez un fichier `.env.local` :
+* `DATABASE_URL` : Connexion PostgreSQL.
+* `CORS_ALLOW_ORIGIN` : Domaines autorisés à consommer l'API.
+* `JWT_SECRET_KEY` / `JWT_PUBLIC_KEY` : Clés pour la signature des tokens.
 
 ---
 
-## Tester que ça marche
+## 💻 3. Implémentation & Développement
 
+### Structure du Code
+Le projet impose une séparation stricte des responsabilités :
+
+* `src/Entity` : Modèles de données avec attributs API Platform.
+* `src/State` : Logique de traitement (ex: `UserPasswordHasherProcessor` pour le hachage automatique des mots de passe).
+* `src/Security` : Gestion de l'authentification et des abonnés aux événements.
+
+### Ajouter une Ressource
+Pour créer une nouvelle ressource, utilisez la CLI Symfony :
 ```bash
-# 1. Login → pose un cookie httpOnly
-curl -i -X POST http://localhost:8080/api/login \
-  -H 'Content-Type: application/json' \
-  -c /tmp/cookies.txt \
-  -d '{"email":"admin@example.com","password":"adminpass"}'
-# → 200 OK, Set-Cookie: auth_token=...; httponly; samesite=lax
+docker compose exec php bin/console make:entity --api-resource
+```
 
-# 2. Appeler /api/me avec le cookie
-curl http://localhost:8080/api/me -b /tmp/cookies.txt
-
-# 3. Logout
-curl -i -X POST http://localhost:8080/api/logout -b /tmp/cookies.txt
-# → 204, cookie effacé
+**Exemple d'implémentation propre (Attributs PHP 8.3) :**
+```php
+#[ORM\Entity]
+#[ApiResource(
+    operations: [
+        new Get(),
+        new Post(processor: UserPasswordHasherProcessor::class)
+    ],
+    normalizationContext: ['groups' => ['user:read']],
+    denormalizationContext: ['groups' => ['user:write']]
+)]
+class User { ... }
 ```
 
 ---
 
-## Les endpoints fournis
+## 🧪 4. Tests & Validation
 
-| Méthode | URL                | Qui peut l'appeler   | À quoi ça sert                      |
-|---------|--------------------|----------------------|-------------------------------------|
-| POST    | `/api/users`       | Public               | S'inscrire (`email`, `plainPassword`) |
-| POST    | `/api/login`       | Public               | Se connecter → pose le cookie JWT   |
-| POST    | `/api/logout`      | Public               | Efface le cookie                    |
-| GET     | `/api/me`          | Connecté             | Profil de l'utilisateur courant     |
-| GET     | `/api/users/{id}`  | Admin ou le user lui-même | Lire un user                   |
-| GET     | `/api/docs`        | Public               | Doc Swagger/OpenAPI                 |
+La qualité du code est assurée par une suite de tests automatisés et des outils d'analyse statique.
 
----
-
-## Côté client (SPA, React, Vue, etc.)
-
-Le navigateur gère le cookie tout seul — tu n'as **rien à stocker en JavaScript**. Juste `credentials: 'include'` :
-
-```js
-// Login
-await fetch('/api/login', {
-  method: 'POST',
-  credentials: 'include',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email, password }),
-});
-
-// Tout appel ultérieur — le cookie est envoyé automatiquement
-await fetch('/api/me', { credentials: 'include' });
-
-// Logout
-await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-```
-
----
-
-## Commandes Make
-
-> Règle d'or : **toutes les commandes Symfony/composer passent par `make`**, jamais par le PHP du Mac.
-
-### Tous les jours
-
+### Exécuter les tests
 ```bash
-make start             # démarre les conteneurs
-make stop              # les stoppe
-make shell             # ouvre un bash dans le conteneur PHP
-make logs              # logs en direct
+# Tests unitaires et fonctionnels (PHPUnit)
+make test
+make test-coverage
+
+# Analyse statique (PHPStan)
+make analyse
 ```
 
-### Base de données
-
-```bash
-make migrate           # applique les migrations
-make migrate-diff      # génère une nouvelle migration depuis tes entités
-make fixtures          # recharge les fixtures
-make reset             # drop + create + migrate + fixtures (tout neuf)
-```
-
-### Qualité de code
-
-```bash
-make test              # PHPUnit
-make cs                # check style (dry-run)
-make cs-fix            # corrige le style
-make analyse           # PHPStan
-make qa                # lint + cs + analyse + test
-```
-
-### Utilitaires
-
-```bash
-make composer c="require mon/bundle"
-make console  c="debug:router"
-make jwt               # régénère les clés JWT
-make clean             # supprime conteneurs, volumes, cache
-```
+Les tests se trouvent dans le répertoire `tests/`.
 
 ---
 
-## Ajouter une ressource
+## 💡 5. Best Practices (Production Ready)
 
-```bash
-make console c="make:entity Article"    # crée l'entité + le repository
-make migrate-diff                        # génère la migration
-make migrate                             # l'applique
-```
+Pour maintenir ce projet à un haut niveau de qualité, voici trois piliers appliqués :
 
-Ajoute ensuite `#[ApiResource]` sur ta classe dans `src/Entity/Article.php` et l'API est disponible sur `/api/articles`.
-
----
-
-## Configuration
-
-Le fichier `.env` couvre tout ce qui est utile. Les trucs qu'on touche vraiment :
-
-| Variable                | À quoi ça sert                                     | Défaut                            |
-|-------------------------|----------------------------------------------------|-----------------------------------|
-| `NGINX_PORT`            | Port HTTP exposé                                   | `8080`                            |
-| `POSTGRES_PORT`         | Port Postgres exposé (pour connect depuis le Mac)  | `5432`                            |
-| `JWT_TTL`               | Durée de vie du JWT (secondes)                     | `3600`                            |
-| `JWT_COOKIE_SECURE`     | `1` en prod HTTPS, `0` en dev HTTP                 | `0` en dev, `1` dans `.env.example` |
-| `JWT_COOKIE_SAMESITE`   | `lax` \| `strict` \| `none`                        | `lax`                             |
-| `CORS_ALLOW_ORIGIN`     | Regex des origines autorisées                      | `localhost` + `127.0.0.1`         |
-
-Pour overrider en local sans toucher à `.env`, utilise `.env.local` (gitignoré).
+1.  **Sécurité (OWASP)** :
+    * Utilisation systématique des **Voters** Symfony pour une gestion fine des droits (ACL).
+    * Protection contre les attaques CSRF grâce à l'utilisation de cookies `SameSite: Lax`.
+2.  **Performance & Cache** :
+    * Utilisation de l'**Eager Loading** dans les requêtes Doctrine pour éviter le problème du "N+1 queries".
+    * Activation du cache d'identification (Invalidation via Varnish ou Redis).
+3.  **Typage Strict** :
+    * `declare(strict_types=1);` dans tous les fichiers.
+    * Utilisation des propriétés `readonly` pour les services injectés afin de garantir l'immutabilité.
 
 ---
-
-## ⚠️ À savoir avant la prod
-
-1. **Passe `JWT_COOKIE_SECURE=1` et sers en HTTPS.** Un cookie `Secure=0` sur HTTP est sniffable.
-2. **`CORS_ALLOW_ORIGIN` doit lister explicitement tes origines.** Le wildcard `^.*$` est incompatible avec les cookies — les navigateurs refuseront la réponse.
-3. **Le logout n'invalide pas le JWT côté serveur.** Le cookie est effacé chez le client, mais un token volé avant le logout reste valide jusqu'à `exp`. Garde `JWT_TTL` court (1 h par défaut est raisonnable).
-4. **CSRF : `SameSite=Lax` suffit pour un SPA same-site.** Si ton SPA tourne sur un domaine différent de l'API (`SameSite=None`), ajoute une protection dédiée (double-submit token ou en-tête custom).
-5. **Change la passphrase JWT** (`JWT_PASSPHRASE` dans `.env`) et régénère les clés avec `make jwt` avant prod.
-
----
-
-## Stack
-
-PHP 8.5 · Symfony 7.4 · API Platform 4.3 · Doctrine ORM 3 · PostgreSQL 16 · Lexik JWT · Nelmio CORS · PHPUnit 13 · PHPStan 2 · PHP-CS-Fixer 3 · Nginx 1.25 · Mailpit (mails de dev sur http://localhost:8025).
-
----
-
-## Arborescence
-
-```
-src/
-  Controller/      # LoginController (stub), LogoutController
-  DataFixtures/    # AppFixtures (admin + user de démo)
-  Entity/          # User (UUID v7, ApiResource)
-  Repository/      # UserRepository
-  Security/        # JwtCookieSubscriber (pose le cookie sur login)
-  State/           # UserPasswordHasherProcessor + MeProvider
-config/packages/   # security, lexik_jwt, nelmio_cors, doctrine, …
-migrations/        # Migrations Doctrine
-tests/Api/         # AuthFlowTest (end-to-end du flow de login)
-```
