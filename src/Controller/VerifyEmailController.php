@@ -14,8 +14,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class VerifyEmailController extends AbstractController
 {
     public function __construct(
-        private UserRepository $userRepository,
-        private EntityManagerInterface $em,
+        private readonly UserRepository $userRepository,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
