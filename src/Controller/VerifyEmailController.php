@@ -30,15 +30,17 @@ final class VerifyEmailController extends AbstractController
 
         $user = $this->userRepository->findOneBy(['emailVerificationToken' => $token]);
 
-        if (null === $user) {
-            return $this->json(['message' => 'Token invalide ou expiré.'], 404);
+        if (null === $user || !$user->isEmailVerificationTokenValid()) {
+            return $this->json(['message' => 'Token invalide ou expiré.'], 400);
         }
 
         if ($user->isEmailVerified()) {
             return $this->json(['message' => 'Adresse déjà vérifiée.']);
         }
 
-        $user->setEmailVerified(true)->setEmailVerificationToken(null);
+        $user->setEmailVerified(true)
+            ->setEmailVerificationToken(null)
+            ->setEmailVerificationTokenExpiresAt(null);
         $this->em->flush();
 
         return $this->json(['message' => 'Adresse e-mail vérifiée avec succès.']);

@@ -79,6 +79,25 @@ final class UserFactory extends PersistentObjectFactory
         return $this->with([
             'emailVerified' => true,
             'emailVerificationToken' => null,
+            'emailVerificationTokenExpiresAt' => null,
+        ]);
+    }
+
+    public function withValidToken(string $token): static
+    {
+        return $this->with([
+            'emailVerified' => false,
+            'emailVerificationToken' => $token,
+            'emailVerificationTokenExpiresAt' => new \DateTimeImmutable('+24 hours'),
+        ]);
+    }
+
+    public function withExpiredToken(string $token): static
+    {
+        return $this->with([
+            'emailVerified' => false,
+            'emailVerificationToken' => $token,
+            'emailVerificationTokenExpiresAt' => new \DateTimeImmutable('-1 hour'),
         ]);
     }
 }

@@ -21,6 +21,7 @@ class EmailVerificationService
     public function prepareToken(User $user): void
     {
         $user->setEmailVerificationToken(bin2hex(random_bytes(32)));
+        $user->setEmailVerificationTokenExpiresAt(new \DateTimeImmutable('+24 hours'));
     }
 
     public function sendVerificationEmail(User $user): void

@@ -78,6 +78,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 64, nullable: true)]
     private ?string $emailVerificationToken = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $emailVerificationTokenExpiresAt = null;
+
     /** Mot de passe en clair, uniquement à l'entrée. */
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8, max: 4096, groups: ['user:create'])]
@@ -127,9 +130,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return array_values(array_unique($roles));
     }
 
+    private const ALLOWED_ROLES = ['ROLE_USER', 'ROLE_ADMIN'];
+
     /** @param list<string> $roles */
     public function setRoles(array $roles): self
     {
+        foreach ($roles as $role) {
+            if (!in_array($role, self::ALLOWED_ROLES, true)) {
+                throw new \InvalidArgumentException(sprintf('Rôle non autorisé : "%s".', $role));
+            }
+        }
         $this->roles = $roles;
 
         return $this;
@@ -186,5 +196,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->emailVerificationToken = $token;
 
         return $this;
+    }
+
+    public function getEmailVerificationTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerificationTokenExpiresAt;
+    }
+
+    public function setEmailVerificationTokenExpiresAt(?\DateTimeImmutable $expiresAt): self
+    {
+        $this->emailVerificationTokenExpiresAt = $expiresAt;
+
+        return $this;
+    }
+
+    public function isEmailVerificationTokenValid(): bool
+    {
+        return null !== $this->emailVerificationToken
+            && null !== $this->emailVerificationTokenExpiresAt
+            && $this->emailVerificationTokenExpiresAt > new \DateTimeImmutable();
     }
 }

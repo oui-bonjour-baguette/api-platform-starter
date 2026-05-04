@@ -57,6 +57,8 @@ final class EmailVerificationTest extends ApiTestCase
         self::assertNotNull($user);
         self::assertFalse($user->isEmailVerified());
         self::assertNotNull($user->getEmailVerificationToken());
+        self::assertNotNull($user->getEmailVerificationTokenExpiresAt());
+        self::assertGreaterThan(new \DateTimeImmutable(), $user->getEmailVerificationTokenExpiresAt());
     }
 
     /**
@@ -97,10 +99,8 @@ final class EmailVerificationTest extends ApiTestCase
     {
         $client = self::createClient();
 
-        UserFactory::createOne([
+        UserFactory::new()->withValidToken('validtoken123abc')->create([
             'email' => 'toverify@example.com',
-            'emailVerificationToken' => 'validtoken123abc',
-            'emailVerified' => false,
         ]);
 
         $client->request('GET', '/api/verify-email?token=validtoken123abc');
@@ -123,7 +123,24 @@ final class EmailVerificationTest extends ApiTestCase
 
         $client->request('GET', '/api/verify-email?token=doesnotexist');
 
-        self::assertResponseStatusCodeSame(404);
+        self::assertResponseStatusCodeSame(400);
+        self::assertJsonContains(['message' => 'Token invalide ou expiré.']);
+    }
+
+    /**
+     * @throws TransportExceptionInterface
+     */
+    public function testVerifyEmailWithExpiredToken(): void
+    {
+        $client = self::createClient();
+
+        UserFactory::new()->withExpiredToken('expiredtoken456')->create([
+            'email' => 'expired@example.com',
+        ]);
+
+        $client->request('GET', '/api/verify-email?token=expiredtoken456');
+
+        self::assertResponseStatusCodeSame(400);
         self::assertJsonContains(['message' => 'Token invalide ou expiré.']);
     }
 
@@ -151,10 +168,8 @@ final class EmailVerificationTest extends ApiTestCase
     {
         $client = self::createClient();
 
-        UserFactory::createOne([
+        UserFactory::new()->withValidToken('myverifytoken')->create([
             'email' => 'verified@example.com',
-            'emailVerificationToken' => 'myverifytoken',
-            'emailVerified' => false,
         ]);
 
         $client->request('GET', '/api/verify-email?token=myverifytoken');
