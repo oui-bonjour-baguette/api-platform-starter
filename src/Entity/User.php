@@ -72,6 +72,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private string $password = '';
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isEmailVerified = false;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $emailVerificationToken = null;
+
     /** Mot de passe en clair, uniquement à l'entrée. */
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8, max: 4096, groups: ['user:create'])]
@@ -156,5 +162,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function eraseCredentials(): void
     {
         $this->plainPassword = null;
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->isEmailVerified;
+    }
+
+    public function setEmailVerified(bool $verified): self
+    {
+        $this->isEmailVerified = $verified;
+
+        return $this;
+    }
+
+    public function getEmailVerificationToken(): ?string
+    {
+        return $this->emailVerificationToken;
+    }
+
+    public function setEmailVerificationToken(?string $token): self
+    {
+        $this->emailVerificationToken = $token;
+
+        return $this;
     }
 }

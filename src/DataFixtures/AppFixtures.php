@@ -22,11 +22,13 @@ final class AppFixtures extends Fixture
         $admin->setEmail('admin@example.com');
         $admin->setRoles(['ROLE_ADMIN']);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, 'adminpass'));
+        $admin->setEmailVerified(true);
         $manager->persist($admin);
 
         $user = new User();
         $user->setEmail('user@example.com');
         $user->setPassword($this->passwordHasher->hashPassword($user, 'userpass'));
+        $user->setEmailVerified(true);
         $manager->persist($user);
 
         $manager->flush();

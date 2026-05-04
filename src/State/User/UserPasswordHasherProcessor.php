@@ -8,6 +8,7 @@ use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\User;
+use App\Security\EmailVerificationService;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -27,6 +28,7 @@ final readonly class UserPasswordHasherProcessor implements ProcessorInterface
         #[Autowire(service: PersistProcessor::class)]
         private ProcessorInterface $persistProcessor,
         private UserPasswordHasherInterface $passwordHasher,
+        private EmailVerificationService $emailVerificationService,
     ) {
     }
 
@@ -42,6 +44,12 @@ final readonly class UserPasswordHasherProcessor implements ProcessorInterface
             $data->eraseCredentials();
         }
 
-        return $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+        $this->emailVerificationService->prepareToken($data);
+
+        $persisted = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+
+        $this->emailVerificationService->sendVerificationEmail($persisted);
+
+        return $persisted;
     }
 }

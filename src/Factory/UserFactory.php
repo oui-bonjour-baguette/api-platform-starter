@@ -73,4 +73,12 @@ final class UserFactory extends PersistentObjectFactory
             'roles' => ['ROLE_ADMIN'],
         ]);
     }
+
+    public function asVerified(): static
+    {
+        return $this->with([
+            'emailVerified' => true,
+            'emailVerificationToken' => null,
+        ]);
+    }
 }
