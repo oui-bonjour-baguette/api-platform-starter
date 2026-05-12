@@ -136,8 +136,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRoles(array $roles): self
     {
         foreach ($roles as $role) {
-            if (!in_array($role, self::ALLOWED_ROLES, true)) {
-                throw new \InvalidArgumentException(sprintf('Rôle non autorisé : "%s".', $role));
+            if (!\in_array($role, self::ALLOWED_ROLES, true)) {
+                throw new \InvalidArgumentException(\sprintf('Rôle non autorisé : "%s".', $role));
             }
         }
         $this->roles = $roles;
@@ -169,9 +169,37 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    #[\Deprecated]
     public function eraseCredentials(): void
     {
         $this->plainPassword = null;
+    }
+
+    public function __serialize(): array
+    {
+        // 1. On efface les données sensibles ici
+        $this->plainPassword = null;
+
+        // 2. On retourne uniquement les données utiles et non-sensibles
+        return [
+            $this->id,
+            $this->email,
+            $this->roles,
+            $this->password, // Le hash (sécurisé), pas le mot de passe en clair !
+        ];
+    }
+
+    /**
+     * Restaure l'objet depuis la session.
+     */
+    public function __unserialize(array $data): void
+    {
+        [
+            $this->id,
+            $this->email,
+            $this->roles,
+            $this->password,
+        ] = $data;
     }
 
     public function isEmailVerified(): bool

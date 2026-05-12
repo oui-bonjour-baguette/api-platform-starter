@@ -63,7 +63,7 @@ final class JwtCookieSubscriberTest extends TestCase
         // On simule le payload généré par LexikJWT
         $event = new AuthenticationSuccessEvent([
             'token' => 'header.payload.signature',
-            'user' => 'alice@example.com'
+            'user' => 'alice@example.com',
         ], $user, $response);
 
         $subscriber->onAuthenticationSuccess($event);

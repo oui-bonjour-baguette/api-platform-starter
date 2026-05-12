@@ -9,7 +9,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\User;
 use App\Security\EmailVerificationService;
+use Monolog\Attribute\WithMonologChannel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
@@ -18,9 +20,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  *
  * @implements ProcessorInterface<User, User>
  */
+#[WithMonologChannel('api')]
 final readonly class UserPasswordHasherProcessor implements ProcessorInterface
 {
-
     /**
      * @param ProcessorInterface<User, User> $persistProcessor
      */
@@ -36,12 +38,14 @@ final readonly class UserPasswordHasherProcessor implements ProcessorInterface
      * @param User                 $data
      * @param array<string, mixed> $uriVariables
      * @param array<string, mixed> $context
+     *
+     * @throws TransportExceptionInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): User
     {
         if (null !== $data->getPlainPassword() && '' !== $data->getPlainPassword()) {
             $data->setPassword($this->passwordHasher->hashPassword($data, $data->getPlainPassword()));
-            $data->eraseCredentials();
+            $data->setPlainPassword(null);
         }
 
         $this->emailVerificationService->prepareToken($data);

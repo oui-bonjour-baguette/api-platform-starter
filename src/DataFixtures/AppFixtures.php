@@ -20,7 +20,7 @@ final class AppFixtures extends Fixture
     {
         // ATTENTION : fixtures dev uniquement — ne jamais charger en production.
         $adminPassword = $_ENV['FIXTURE_ADMIN_PASSWORD'] ?? 'Admin@Dev!2024';
-        $userPassword  = $_ENV['FIXTURE_USER_PASSWORD']  ?? 'User@Dev!2024';
+        $userPassword = $_ENV['FIXTURE_USER_PASSWORD'] ?? 'User@Dev!2024';
 
         $admin = new User();
         $admin->setEmail('admin@example.com');

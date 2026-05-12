@@ -58,7 +58,7 @@ final class UserFactory extends PersistentObjectFactory
                     $user->setPassword($hashedPassword);
 
                     // Sécurité : on efface la donnée sensible de l'entité
-                    $user->eraseCredentials();
+                    $user->setPlainPassword(null);
                 }
             })
         ;

@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
+use Monolog\Attribute\WithMonologChannel;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
 
+#[WithMonologChannel('security')]
 class EmailVerificationService
 {
     public function __construct(
-        private MailerInterface $mailer,
+        private readonly MailerInterface $mailer,
         #[Autowire('%env(APP_BASE_URL)%')]
-        private string $baseUrl,
+        private readonly string $baseUrl,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -39,6 +43,16 @@ class EmailVerificationService
                 'user' => $user,
             ]);
 
-        $this->mailer->send($email);
+        try {
+            $this->mailer->send($email);
+            $this->logger->info('User email successfully verified.', [
+                'user_id' => $user->getId(),
+            ]);
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->warning('Email verification failed.', [
+                'user_id' => $user->getId(),
+                'reason' => $e->getMessage(),
+            ]);
+        }
     }
 }
