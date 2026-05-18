@@ -20,17 +20,28 @@ final class OpenApiDecorator implements OpenApiFactoryInterface
         $openApi = ($this->decorated)($context);
         $paths = $openApi->getPaths();
 
-        $messageSchema = new \ArrayObject([
-            'type' => 'object',
-            'properties' => [
-                'message' => ['type' => 'string'],
-            ],
-        ]);
-
         $paths->addPath('/api/forgot-password', new Model\PathItem(
             post: new Model\Operation(
                 operationId: 'forgotPassword',
                 tags: ['Authentification'],
+                responses: [
+                    '200' => new Model\Response(
+                        description: 'Email envoyé (ou compte inexistant — anti-énumération)',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']]],
+                            ],
+                        ]),
+                    ),
+                    '422' => new Model\Response(
+                        description: 'Adresse e-mail invalide',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']]],
+                            ],
+                        ]),
+                    ),
+                ],
                 summary: 'Demander la réinitialisation du mot de passe',
                 description: "Envoie un email de réinitialisation si le compte existe. Retourne toujours 200 pour éviter l'énumération des comptes.",
                 requestBody: new Model\RequestBody(
@@ -41,27 +52,13 @@ final class OpenApiDecorator implements OpenApiFactoryInterface
                                 'type' => 'object',
                                 'required' => ['email'],
                                 'properties' => [
-                                    'email' => [
-                                        'type' => 'string',
-                                        'format' => 'email',
-                                        'example' => 'user@example.com',
-                                    ],
+                                    'email' => ['type' => 'string', 'format' => 'email', 'example' => 'user@example.com'],
                                 ],
                             ],
                         ],
                     ]),
                     required: true,
                 ),
-                responses: new \ArrayObject([
-                    '200' => [
-                        'description' => 'Email envoyé (ou compte inexistant — anti-énumération)',
-                        'content' => ['application/json' => ['schema' => $messageSchema]],
-                    ],
-                    '422' => [
-                        'description' => 'Adresse e-mail invalide',
-                        'content' => ['application/json' => ['schema' => $messageSchema]],
-                    ],
-                ]),
             ),
         ));
 
@@ -69,8 +66,40 @@ final class OpenApiDecorator implements OpenApiFactoryInterface
             post: new Model\Operation(
                 operationId: 'resetPassword',
                 tags: ['Authentification'],
+                responses: [
+                    '200' => new Model\Response(
+                        description: 'Mot de passe réinitialisé avec succès',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']]],
+                            ],
+                        ]),
+                    ),
+                    '400' => new Model\Response(
+                        description: 'Token manquant, invalide ou expiré',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => ['type' => 'object', 'properties' => ['message' => ['type' => 'string']]],
+                            ],
+                        ]),
+                    ),
+                    '422' => new Model\Response(
+                        description: 'Mot de passe invalide (contraintes non respectées)',
+                        content: new \ArrayObject([
+                            'application/json' => [
+                                'schema' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'message' => ['type' => 'string'],
+                                        'errors' => ['type' => 'array', 'items' => ['type' => 'string']],
+                                    ],
+                                ],
+                            ],
+                        ]),
+                    ),
+                ],
                 summary: 'Réinitialiser le mot de passe',
-                description: 'Réinitialise le mot de passe à l\'aide du token reçu par email. Le token a une durée de vie d\'1 heure.',
+                description: "Réinitialise le mot de passe à l'aide du token reçu par email. Le token a une durée de vie d'1 heure.",
                 requestBody: new Model\RequestBody(
                     description: 'Token de réinitialisation et nouveau mot de passe',
                     content: new \ArrayObject([
@@ -79,10 +108,7 @@ final class OpenApiDecorator implements OpenApiFactoryInterface
                                 'type' => 'object',
                                 'required' => ['token', 'password'],
                                 'properties' => [
-                                    'token' => [
-                                        'type' => 'string',
-                                        'example' => 'a3f8c2...',
-                                    ],
+                                    'token' => ['type' => 'string', 'example' => 'a3f8c2...'],
                                     'password' => [
                                         'type' => 'string',
                                         'format' => 'password',
@@ -96,33 +122,6 @@ final class OpenApiDecorator implements OpenApiFactoryInterface
                     ]),
                     required: true,
                 ),
-                responses: new \ArrayObject([
-                    '200' => [
-                        'description' => 'Mot de passe réinitialisé avec succès',
-                        'content' => ['application/json' => ['schema' => $messageSchema]],
-                    ],
-                    '400' => [
-                        'description' => 'Token manquant, invalide ou expiré',
-                        'content' => ['application/json' => ['schema' => $messageSchema]],
-                    ],
-                    '422' => [
-                        'description' => 'Mot de passe invalide (contraintes non respectées)',
-                        'content' => [
-                            'application/json' => [
-                                'schema' => [
-                                    'type' => 'object',
-                                    'properties' => [
-                                        'message' => ['type' => 'string'],
-                                        'errors' => [
-                                            'type' => 'array',
-                                            'items' => ['type' => 'string'],
-                                        ],
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ]),
             ),
         ));
 
