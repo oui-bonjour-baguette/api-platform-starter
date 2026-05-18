@@ -7,11 +7,11 @@
         "php": ">=8.5",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "api-platform/doctrine-orm": "^4.3.3",
-        "api-platform/symfony": "^4.3.3",
+        "api-platform/doctrine-orm": "^4.3.5",
+        "api-platform/symfony": "^4.3.5",
         "doctrine/doctrine-bundle": "^3.2.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
-        "doctrine/orm": "^3.6.3",
+        "doctrine/orm": "^3.6.5",
         "lexik/jwt-authentication-bundle": "^3.2",
         "nelmio/cors-bundle": "^2.6.1",
         "phpdocumentor/reflection-docblock": "^6.0.3",
@@ -23,7 +23,7 @@
         "symfony/flex": "^2.10",
         "symfony/framework-bundle": "7.4.*",
         "symfony/mailer": "7.4.*",
-        "symfony/monolog-bundle": "^4.0",
+        "symfony/monolog-bundle": "^4.0.2",
         "symfony/property-access": "7.4.*",
         "symfony/property-info": "7.4.*",
         "symfony/runtime": "7.4.*",
@@ -85,15 +85,15 @@
         }
     },
     "require-dev": {
-        "doctrine/doctrine-fixtures-bundle": "^4.3",
-        "friendsofphp/php-cs-fixer": "^3.95.1",
-        "phpstan/phpstan": "^2.1.51",
-        "phpstan/phpstan-doctrine": "^2.0.21",
-        "phpstan/phpstan-symfony": "^2.0.15",
-        "phpunit/phpunit": "^13.1.7",
+        "doctrine/doctrine-fixtures-bundle": "^4.3.1",
+        "friendsofphp/php-cs-fixer": "^3.95.2",
+        "phpstan/phpstan": "^2.1.55",
+        "phpstan/phpstan-doctrine": "^2.0.22",
+        "phpstan/phpstan-symfony": "^2.0.17",
+        "phpunit/phpunit": "^13.1.10",
         "symfony/browser-kit": "7.4.*",
         "symfony/http-client": "7.4.*",
         "symfony/maker-bundle": "^1.67",
-        "zenstruck/foundry": "^2.9"
+        "zenstruck/foundry": "^2.9.2"
     }
 }

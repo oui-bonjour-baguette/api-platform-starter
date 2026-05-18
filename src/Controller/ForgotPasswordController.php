@@ -27,7 +27,7 @@ final class ForgotPasswordController extends AbstractController
         $data = json_decode($request->getContent(), true) ?? [];
         $email = trim((string) ($data['email'] ?? ''));
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($email, \FILTER_VALIDATE_EMAIL)) {
             return $this->json(['message' => 'Adresse e-mail invalide.'], 422);
         }
 
