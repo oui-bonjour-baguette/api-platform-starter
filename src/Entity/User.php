@@ -81,6 +81,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $emailVerificationTokenExpiresAt = null;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $passwordResetToken = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $passwordResetTokenExpiresAt = null;
+
     /** Mot de passe en clair, uniquement à l'entrée. */
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8, max: 4096, groups: ['user:create'])]
@@ -243,5 +249,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return null !== $this->emailVerificationToken
             && null !== $this->emailVerificationTokenExpiresAt
             && $this->emailVerificationTokenExpiresAt > new \DateTimeImmutable();
+    }
+
+    public function getPasswordResetToken(): ?string
+    {
+        return $this->passwordResetToken;
+    }
+
+    public function setPasswordResetToken(?string $token): self
+    {
+        $this->passwordResetToken = $token;
+
+        return $this;
+    }
+
+    public function getPasswordResetTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordResetTokenExpiresAt;
+    }
+
+    public function setPasswordResetTokenExpiresAt(?\DateTimeImmutable $expiresAt): self
+    {
+        $this->passwordResetTokenExpiresAt = $expiresAt;
+
+        return $this;
+    }
+
+    public function isPasswordResetTokenValid(): bool
+    {
+        return null !== $this->passwordResetToken
+            && null !== $this->passwordResetTokenExpiresAt
+            && $this->passwordResetTokenExpiresAt > new \DateTimeImmutable();
+    }
+
+    public function clearPasswordResetToken(): self
+    {
+        $this->passwordResetToken = null;
+        $this->passwordResetTokenExpiresAt = null;
+
+        return $this;
     }
 }
