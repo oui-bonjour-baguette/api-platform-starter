@@ -100,4 +100,22 @@ final class UserFactory extends PersistentObjectFactory
             'emailVerificationTokenExpiresAt' => new \DateTimeImmutable('-1 hour'),
         ]);
     }
+
+    public function withValidPasswordResetToken(string $token): static
+    {
+        return $this->with([
+            'emailVerified' => true,
+            'passwordResetToken' => $token,
+            'passwordResetTokenExpiresAt' => new \DateTimeImmutable('+1 hour'),
+        ]);
+    }
+
+    public function withExpiredPasswordResetToken(string $token): static
+    {
+        return $this->with([
+            'emailVerified' => true,
+            'passwordResetToken' => $token,
+            'passwordResetTokenExpiresAt' => new \DateTimeImmutable('-1 hour'),
+        ]);
+    }
 }
